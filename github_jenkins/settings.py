@@ -190,7 +190,7 @@ SOCIAL_AUTH_PIPELINE = (
 )
 
 
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/github-jenkins'
 
 
 try:

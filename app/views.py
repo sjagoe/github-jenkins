@@ -39,7 +39,7 @@ def error(request):
 def logout(request):
     """Logs out user"""
     auth_logout(request)
-    return HttpResponseRedirect('/')
+    return HttpResponseRedirect('/github-jenkins')
 
 
 def form(request):
