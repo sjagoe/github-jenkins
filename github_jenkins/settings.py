@@ -1,4 +1,7 @@
 # Django settings for github_jenkins project.
+import os
+
+import social_auth
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -10,15 +13,15 @@ ADMINS = (
 MANAGERS = ADMINS
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-    #     'NAME': '',                      # Or path to database file if using sqlite3.
-    #     # The following settings are not used with sqlite3:
-    #     'USER': '',
-    #     'PASSWORD': '',
-    #     'HOST': '',                      # Empty for localhost through domain sockets or '127.0.0.1' for localhost through TCP.
-    #     'PORT': '',                      # Set to empty string for default.
-    # }
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': os.path.join(os.path.dirname(__file__), 'db.sqlite3'), # Or path to database file if using sqlite3.
+        # The following settings are not used with sqlite3:
+        # 'USER': '',
+        # 'PASSWORD': '',
+        # 'HOST': '',                      # Empty for localhost through domain sockets or '127.0.0.1' for localhost through TCP.
+        # 'PORT': '',                      # Set to empty string for default.
+    }
 }
 
 # Hosts/domain names that are valid for this site; required if DEBUG is False
@@ -108,6 +111,7 @@ ROOT_URLCONF = 'github_jenkins.urls'
 WSGI_APPLICATION = 'github_jenkins.wsgi.application'
 
 TEMPLATE_DIRS = (
+    os.path.join(os.path.dirname(__file__), 'templates'),
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
@@ -120,10 +124,10 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Uncomment the next line to enable the admin:
-    # 'django.contrib.admin',
-    # Uncomment the next line to enable admin documentation:
-    # 'django.contrib.admindocs',
+    'django.contrib.admin',
+    'django.contrib.admindocs',
+    'social_auth',
+    'app',
 )
 
 # A sample logging configuration. The only tangible logging
@@ -154,3 +158,42 @@ LOGGING = {
         },
     }
 }
+
+
+AUTHENTICATION_BACKENDS = (
+    'social_auth.backends.contrib.github.GithubBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+TEMPLATE_CONTEXT_PROCESSORS = (
+    'django.contrib.auth.context_processors.auth',
+    'django.core.context_processors.debug',
+    'django.core.context_processors.i18n',
+    'django.core.context_processors.media',
+    'django.contrib.messages.context_processors.messages',
+    'social_auth.context_processors.social_auth_by_type_backends',
+)
+
+SOCIAL_AUTH_PIPELINE = (
+    'social_auth.backends.pipeline.social.social_auth_user',
+    'social_auth.backends.pipeline.associate.associate_by_email',
+    'social_auth.backends.pipeline.misc.save_status_to_session',
+    'app.pipeline.redirect_to_form',
+    'app.pipeline.username',
+    'social_auth.backends.pipeline.user.create_user',
+    'social_auth.backends.pipeline.social.associate_user',
+    'social_auth.backends.pipeline.social.load_extra_data',
+    'social_auth.backends.pipeline.user.update_user_details',
+    'social_auth.backends.pipeline.misc.save_status_to_session',
+    'app.pipeline.redirect_to_form2',
+    'app.pipeline.first_name',
+)
+
+
+LOGIN_REDIRECT_URL = '/'
+
+
+try:
+    from github_jenkins.local_settings import *
+except ImportError:
+    raise Exception('local_settings.py must be created with authentication config')
