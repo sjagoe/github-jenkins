@@ -68,7 +68,7 @@ STATIC_ROOT = ''
 
 # URL prefix for static files.
 # Example: "http://example.com/static/", "http://static.example.com/"
-STATIC_URL = '/static/'
+STATIC_URL = '/github-jenkins/static/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
@@ -174,23 +174,10 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     'social_auth.context_processors.social_auth_by_type_backends',
 )
 
-SOCIAL_AUTH_PIPELINE = (
-    'social_auth.backends.pipeline.social.social_auth_user',
-    'social_auth.backends.pipeline.associate.associate_by_email',
-    'social_auth.backends.pipeline.misc.save_status_to_session',
-    'app.pipeline.redirect_to_form',
-    'app.pipeline.username',
-    'social_auth.backends.pipeline.user.create_user',
-    'social_auth.backends.pipeline.social.associate_user',
-    'social_auth.backends.pipeline.social.load_extra_data',
-    'social_auth.backends.pipeline.user.update_user_details',
-    'social_auth.backends.pipeline.misc.save_status_to_session',
-    'app.pipeline.redirect_to_form2',
-    'app.pipeline.first_name',
-)
 
-
+# LOGIN_URL = '/github-jenkins/accounts/login'
 LOGIN_REDIRECT_URL = '/github-jenkins'
+LOGIN_URL = '/github-jenkins/logout'
 
 
 try:

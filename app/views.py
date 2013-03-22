@@ -8,14 +8,36 @@ from django.contrib.messages.api import get_messages
 from social_auth import __version__ as version
 from social_auth.utils import setting
 
+from app.models import Project
+
 
 def home(request):
     """Home view, displays login mechanism"""
     if request.user.is_authenticated():
-        return HttpResponseRedirect('done')
+        return redirect('projects')
     else:
         return render_to_response('home.html', {'version': version},
                                   RequestContext(request))
+
+
+@login_required
+def projects(request):
+    """Displays projects"""
+    ctx = {
+        'projects': Project.objects.all(),
+        'version': version,
+        'last_login': request.session.get('social_auth_last_login_backend')
+    }
+    return render_to_response('projects.html', ctx, RequestContext(request))
+
+
+@login_required
+def pull_requests(request, owner, project):
+    project_ = Project.objects.filter(owner=owner, name=project).only()[0]
+    print project_
+    pull_requests = project_.get_pull_requests(request.user)
+    return render_to_response('pull_requests.html', {'pull_requests': pull_requests},
+                              RequestContext(request))
 
 
 @login_required
