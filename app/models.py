@@ -32,9 +32,28 @@ class CustomUser(models.Model):
         return True
 
 
+class JenkinsJob(models.Model):
+    location = models.CharField(max_length=2048)
+    job_name = models.CharField(max_length=2048)
+
+    username = models.CharField(max_length=128)
+    password = models.CharField(max_length=128)
+
+    def __unicode__(self):
+        return u'{0}/job/{1}'.format(self.location, self.job_name)
+
+
 class Project(models.Model):
     owner = models.CharField(max_length=128)
     name = models.CharField(max_length=256)
+
+    username = models.CharField(max_length=128)
+    password = models.CharField(max_length=128)
+
+    jenkins_job = models.ForeignKey(JenkinsJob)
+
+    def __unicode__(self):
+        return u'{0}/{1}'.format(self.owner, self.name)
 
     def get_pull_requests(self, user):
         gh = get_gh(user)
@@ -52,3 +71,20 @@ class Project(models.Model):
 
     class Meta:
         unique_together = ('owner', 'name')
+
+
+class JenkinsBuild(models.Model):
+    project = models.ForeignKey(Project)
+    build_number = models.IntegerField()
+    build_url = models.CharField(max_length=4096)
+    pull_request = models.IntegerField(db_index=True)
+    commit = models.CharField(max_length=40)
+
+    @classmethod
+    def from_pull_request(cls, pr):
+        return cls.objects.filter(pull_request=pr.number).\
+            filter(build_number=cls.objects.filter(pull_request=pr.number).\
+                   aggregate(Max('build_number'))['build_number__max']).all()
+
+    class Meta:
+        unique_together = ('project', 'build_number')
