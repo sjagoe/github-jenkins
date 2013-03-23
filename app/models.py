@@ -41,6 +41,11 @@ class Project(models.Model):
         repo = gh.get_repo(self.full_name)
         return repo.get_pulls()
 
+    def get_pull_request(self, user, pr_id):
+        gh = get_gh(user)
+        repo = gh.get_repo(self.full_name)
+        return repo.get_pull(pr_id)
+
     @property
     def full_name(self):
         return '{0}/{1}'.format(self.owner, self.name)

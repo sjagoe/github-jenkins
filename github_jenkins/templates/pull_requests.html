@@ -14,6 +14,7 @@
       <tr class="even">
         <th>Pull Request ID</th>
         <th>Description</th>
+        <th/>
       </tr>
     </head>
     <body>
@@ -21,6 +22,7 @@
       <tr class="{% cycle 'odd' 'even' %}">
         <td><a href="{{ pr.issue_url }}">{{ pr.number }}</a></td>
         <td>{{ pr.title }}</td>
+        <td><a href="{% url "rebuild" owner=project.owner project=project.name pr=pr.number %}">Build now</a></td>
       </tr>
     {% endfor %}
     </body>

@@ -34,10 +34,20 @@ def projects(request):
 @login_required
 def pull_requests(request, owner, project):
     project_ = Project.objects.filter(owner=owner, name=project).only()[0]
-    print project_
     pull_requests = project_.get_pull_requests(request.user)
-    return render_to_response('pull_requests.html', {'pull_requests': pull_requests},
+    ctx = {
+        'pull_requests': pull_requests,
+        'project': project_,
+    }
+    return render_to_response('pull_requests.html', ctx,
                               RequestContext(request))
+
+
+@login_required
+def rebuild_pr(request, owner, project, pr):
+    project_ = Project.objects.filter(owner=owner, name=project).only()[0]
+    pull_request = project_.get_pull_request(request.user, int(pr))
+    return redirect('pull_requests', owner, project)
 
 
 @login_required
