@@ -1,6 +1,7 @@
-# Define a custom User class to work with django-social-auth
-from django.db import models
+import urllib
 
+from django.db import models
+from django.contrib.auth.models import User
 
 import github
 
@@ -40,6 +41,10 @@ class JenkinsJob(models.Model):
     password = models.CharField(max_length=128)
 
     def __unicode__(self):
+        return u'{0}: {1}'.format(self.location, self.job_name)
+
+    @property
+    def url(self):
         return u'{0}/job/{1}'.format(self.location, self.job_name)
 
 
@@ -47,8 +52,7 @@ class Project(models.Model):
     owner = models.CharField(max_length=128)
     name = models.CharField(max_length=256)
 
-    username = models.CharField(max_length=128)
-    password = models.CharField(max_length=128)
+    user = models.ForeignKey(User)
 
     jenkins_job = models.ForeignKey(JenkinsJob)
 
@@ -74,17 +78,44 @@ class Project(models.Model):
 
 
 class JenkinsBuild(models.Model):
+
+    WAITING = 'Waiting'
+    RUNNING = 'Running'
+    FAILED = 'Failed'
+    COMPLETED = 'Completed'
+
     project = models.ForeignKey(Project)
-    build_number = models.IntegerField()
-    build_url = models.CharField(max_length=4096)
+    build_number = models.IntegerField(null=True)
+    build_url = models.CharField(max_length=4096, null=True)
+    build_status = models.CharField(max_length=16, default=WAITING)
+
     pull_request = models.IntegerField(db_index=True)
+    pull_request_url = models.CharField(max_length=4096)
     commit = models.CharField(max_length=40)
+    head_repository = models.CharField(max_length=512)
+
+    @property
+    def trigger_url(self):
+        project = self.project
+        return '{0}/buildWithParameters?{1}'.format(
+            project.jenkins_job.url,
+            urllib.urlencode({'GIT_BASE_REPO': project.full_name,
+                              'GIT_HEAD_REPO': self.head_repository,
+                              'GIT_SHA1': self.commit,
+                              'GITHUB_URL': self.pull_request_url}))
 
     @classmethod
-    def from_pull_request(cls, pr):
+    def new_from_project_pr(cls, project, pr):
+        build = JenkinsBuild(project=project,
+                             pull_request=pr.number,
+                             pull_request_url=pr.issue_url,
+                             commit=pr.head.sha,
+                             head_repository=pr.head.repo.full_name)
+        build.save()
+        return build
+
+    @classmethod
+    def search_pull_request(cls, pr):
         return cls.objects.filter(pull_request=pr.number).\
             filter(build_number=cls.objects.filter(pull_request=pr.number).\
                    aggregate(Max('build_number'))['build_number__max']).all()
-
-    class Meta:
-        unique_together = ('project', 'build_number')

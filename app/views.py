@@ -8,7 +8,9 @@ from django.contrib.messages.api import get_messages
 from social_auth import __version__ as version
 from social_auth.utils import setting
 
-from app.models import Project
+import requests
+
+from app.models import Project, JenkinsBuild
 
 
 def home(request):
@@ -47,6 +49,9 @@ def pull_requests(request, owner, project):
 def rebuild_pr(request, owner, project, pr):
     project_ = Project.objects.filter(owner=owner, name=project).only()[0]
     pull_request = project_.get_pull_request(request.user, int(pr))
+    build = JenkinsBuild.new_from_project_pr(project_, pull_request)
+    jenkins = project_.jenkins_job
+    response = requests.post(build.trigger_url, auth=(jenkins.username, jenkins.password))
     return redirect('pull_requests', owner, project)
 
 
