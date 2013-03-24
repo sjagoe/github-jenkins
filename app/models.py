@@ -5,6 +5,8 @@ from django.contrib.auth.models import User
 
 import github
 
+import requests
+
 
 def get_gh(user):
     auth = user.social_auth.all()[0]
@@ -69,6 +71,22 @@ class Project(models.Model):
         repo = gh.get_repo(self.full_name)
         return repo.get_pull(pr_id)
 
+    @classmethod
+    def get(cls, owner_or_full_name, name=None):
+        if '/' in owner_or_full_name and name is not None:
+            raise Exception('Can\'t pass full name and name')
+        elif '/' not in owner_or_full_name and name is None:
+            raise Exception('If the full name is not given, both '
+                            'owner and name must be specified')
+        elif '/' in owner_or_full_name and name is None:
+            owner, name = owner_or_full_name.split('/', 1)
+        else:
+            owner = owner_or_full_name
+        query = cls.objects.filter(owner=owner, name=name)
+        if query.count() == 0:
+            return None
+        return query.all()[0]
+
     @property
     def full_name(self):
         return '{0}/{1}'.format(self.owner, self.name)
@@ -82,9 +100,11 @@ class JenkinsBuild(models.Model):
     WAITING = 'Waiting'
     RUNNING = 'Running'
     FAILED = 'Failed'
-    COMPLETED = 'Completed'
+    ABORTED = 'Aborted'
+    SUCCESSFUL = 'Successful'
 
     project = models.ForeignKey(Project)
+    build_name = models.CharField(max_length=256, null=True)
     build_number = models.IntegerField(null=True)
     build_url = models.CharField(max_length=4096, null=True)
     build_status = models.CharField(max_length=16, default=WAITING)
@@ -120,9 +140,10 @@ class JenkinsBuild(models.Model):
         return build
 
     @classmethod
-    def search_pull_request(cls, pr):
-        query = cls.objects.filter(pull_request=pr.number).\
-            filter(build_number=cls.objects.filter(pull_request=pr.number).\
+    def search_pull_request(cls, project, pr_number):
+        query = cls.objects.filter(project=project, pull_request=pr_number).\
+            filter(build_number=cls.objects.filter(
+                project=project, pull_request=pr_number).\
                    aggregate(models.Max('build_number'))['build_number__max'])
         count = query.count()
         if count == 0:
@@ -130,5 +151,33 @@ class JenkinsBuild(models.Model):
         elif count == 1:
             return query.all()[0]
         elif count > 1:
-            return query.filter(id=cls.objects.filter(pull_request=pr.number).\
+            return query.filter(id=cls.objects.filter(pull_request=pr_number).\
                                 aggregate(models.Max('id'))['id__max']).all()[0]
+
+    def update_from_jenkins_notification(self, parameters):
+        build_phase = parameters['build']['phase']
+        self.build_url = parameters['build']['full_url']
+        self.build_number = parameters['build']['number']
+        self.build_name = parameters['name']
+
+        if build_phase == 'STARTED':
+            self.build_status = JenkinsBuild.RUNNING
+        else:
+            build_status = parameters['build']['status']
+            if build_status in ('FAILURE', 'UNSTABLE'):
+                self.build_status = JenkinsBuild.FAILED
+            elif build_status == 'ABORTED':
+                self.build_status = JenkinsBuild.ABORTED
+            elif build_status == 'SUCCESS':
+                self.build_status = JenkinsBuild.SUCCESSFUL
+        self.save()
+
+    def trigger_jenkins(self):
+        if self.build_status is not JenkinsBuild.WAITING:
+            raise Exception('Build already trigerred')
+        jenkins = self.project.jenkins_job
+        response = requests.post(
+            self.trigger_url, auth=(jenkins.username, jenkins.password))
+
+    def notify_github(self):
+        pass

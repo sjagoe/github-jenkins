@@ -2,6 +2,7 @@ from django.conf.urls.defaults import patterns, url, include
 from django.contrib import admin
 
 from app.views import home, done, logout, error, projects, pull_requests, rebuild_pr
+from app.notifications import jenkins
 
 admin.autodiscover()
 
@@ -15,6 +16,7 @@ main_patterns = patterns(
     url(r'^done/$', done, name='done'),
     url(r'^error/$', error, name='error'),
     url(r'^logout/$', logout, name='logout'),
+    url(r'^notification/jenkins/$', jenkins, name='notify_jenkins'),
     url(r'', include('social_auth.urls')),
 )
 
