@@ -127,7 +127,8 @@ class JenkinsBuild(models.Model):
             urllib.urlencode({'GIT_BASE_REPO': project.full_name,
                               'GIT_HEAD_REPO': self.head_repository,
                               'GIT_SHA1': self.commit,
-                              'GITHUB_URL': self.pull_request_url}))
+                              'GITHUB_URL': self.pull_request_url,
+                              'PR_NUMBER': self.pull_request}))
 
     @classmethod
     def new_from_project_pr(cls, project, pr):
@@ -173,7 +174,7 @@ class JenkinsBuild(models.Model):
         self.save()
 
     def trigger_jenkins(self):
-        if self.build_status is not JenkinsBuild.WAITING:
+        if self.build_status != JenkinsBuild.WAITING:
             raise Exception('Build already trigerred')
         jenkins = self.project.jenkins_job
         response = requests.post(
@@ -198,6 +199,7 @@ class JenkinsBuild(models.Model):
         else:
             raise Exception('Did not understand status {!r}'.format(
                 self.build_status))
+        text = text.format(build=self.build_number)
         gh = get_gh(self.project.user)
         repo = gh.get_repo(self.head_repository) # ??
         commit = repo.get_commit(self.commit)

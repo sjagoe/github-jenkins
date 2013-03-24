@@ -1,5 +1,4 @@
 import json
-import pprint
 
 from django.http import HttpResponse #, HttpResponseRedirect
 # from django.contrib.auth import logout as auth_logout
@@ -28,7 +27,6 @@ def _get_build(project_name, pr_number):
 @csrf_exempt
 def jenkins(request):
     parameters = json.loads(request.body)
-    pprint.pprint(parameters)
 
     build_phase = parameters['build']['phase']
     if build_phase not in ('STARTED', 'COMPLETED'):
