@@ -57,7 +57,7 @@ def github(request):
         logger.warn('Project {0!r} not found'.format(project_name))
         return HttpResponse(status=404)
 
-    pr_number = pull_request["number"]
+    pr_number = int(pull_request["number"])
     pr_url = pull_request["html_url"]
 
     try:
