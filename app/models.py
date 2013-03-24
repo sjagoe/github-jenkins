@@ -94,6 +94,11 @@ class JenkinsBuild(models.Model):
     commit = models.CharField(max_length=40)
     head_repository = models.CharField(max_length=512)
 
+    def __repr__(self):
+        return u'<JenkinsBuild project={project}, build_number={num}, pr={pr}>'.\
+            format(project=self.project, num=self.build_number,
+                   pr=self.pull_request)
+
     @property
     def trigger_url(self):
         project = self.project
@@ -116,6 +121,14 @@ class JenkinsBuild(models.Model):
 
     @classmethod
     def search_pull_request(cls, pr):
-        return cls.objects.filter(pull_request=pr.number).\
+        query = cls.objects.filter(pull_request=pr.number).\
             filter(build_number=cls.objects.filter(pull_request=pr.number).\
-                   aggregate(Max('build_number'))['build_number__max']).all()
+                   aggregate(models.Max('build_number'))['build_number__max'])
+        count = query.count()
+        if count == 0:
+            return None
+        elif count == 1:
+            return query.all()[0]
+        elif count > 1:
+            return query.filter(id=cls.objects.filter(pull_request=pr.number).\
+                                aggregate(models.Max('id'))['id__max']).all()[0]

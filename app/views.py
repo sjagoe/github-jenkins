@@ -36,9 +36,10 @@ def projects(request):
 @login_required
 def pull_requests(request, owner, project):
     project_ = Project.objects.filter(owner=owner, name=project).only()[0]
-    pull_requests = project_.get_pull_requests(request.user)
+    pr_builds = ((pr, JenkinsBuild.search_pull_request(pr))
+                 for pr in project_.get_pull_requests(request.user))
     ctx = {
-        'pull_requests': pull_requests,
+        'pr_builds': pr_builds,
         'project': project_,
     }
     return render_to_response('pull_requests.html', ctx,

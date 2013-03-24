@@ -3,7 +3,6 @@
 
 {% block script %}
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
-<script src="https://login.persona.org/include.js" type="text/javascript"></script>
 {% endblock %}
 
 {% block content %}
@@ -15,15 +14,19 @@
         <th>Pull Request ID</th>
         <th>Description</th>
         <th>Conflicts?</th>
+        <th>Build #</th>
+        <th>Status</th>
         <th/>
       </tr>
     </head>
     <body>
-    {% for pr in pull_requests %}
+    {% for pr, build in pr_builds %}
       <tr class="{% cycle 'odd' 'even' %}">
         <td><a href="{{ pr.issue_url }}">{{ pr.number }}</a></td>
         <td>{{ pr.title }}</td>
         <td>{% if pr.mergeable %}No{% else %}Yes{% endif %}</td>
+        <td>{% if build and build.build_number %}<a href="{{ build.build_url }}">{{ build.build_number }}</a>{% endif %}</td>
+        <td>{% if build %}{{ build.build_status }}{% endif %}</td>
         <td><a href="{% url "rebuild" owner=project.owner project=project.name pr=pr.number %}">Build now</a></td>
       </tr>
     {% endfor %}
