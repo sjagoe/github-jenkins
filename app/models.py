@@ -120,7 +120,7 @@ class JenkinsBuild(models.Model):
                    pr=self.pull_request)
 
     @property
-    def trigger_url(self):
+    def jenkins_trigger_url(self):
         project = self.project
         return '{0}/buildWithParameters?{1}'.format(
             project.jenkins_job.url,
@@ -177,7 +177,28 @@ class JenkinsBuild(models.Model):
             raise Exception('Build already trigerred')
         jenkins = self.project.jenkins_job
         response = requests.post(
-            self.trigger_url, auth=(jenkins.username, jenkins.password))
+            self.jenkins_trigger_url, auth=(jenkins.username, jenkins.password))
 
     def notify_github(self):
-        pass
+        if self.build_status == JenkinsBuild.WAITING:
+            status = 'pending'
+            text = 'Build is being scheduled'
+        elif self.build_status == JenkinsBuild.RUNNING:
+            status = 'pending'
+            text = 'Build #{build} is running'
+        elif self.build_status == JenkinsBuild.FAILED:
+            status = 'failure'
+            text = 'Build #{build} failed'
+        elif self.build_status == JenkinsBuild.ABORTED:
+            status = 'error'
+            text = 'Build #{build} aborted'
+        elif self.build_status == JenkinsBuild.SUCCESSFUL:
+            status = 'success'
+            text = 'Build #{build} succeeded'
+        else:
+            raise Exception('Did not understand status {!r}'.format(
+                self.build_status))
+        gh = get_gh(self.project.user)
+        repo = gh.get_repo(self.head_repository) # ??
+        commit = repo.get_commit(self.commit)
+        commit.create_status(status, self.build_url, text)
