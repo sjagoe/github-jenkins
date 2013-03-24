@@ -10,5 +10,4 @@ urlpatterns = patterns(
     '',
     url(r'^github-jenkins/', include(app_urlpatterns)),
     url(r'^github-jenkins-admin/', include(admin.site.urls)),
-    # url(r'^github-jenkins-admin/doc/', include('django.contrib.admindocs.urls')),
 )
