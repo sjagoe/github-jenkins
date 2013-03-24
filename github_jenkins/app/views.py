@@ -8,7 +8,7 @@ from django.contrib.messages.api import get_messages
 from social_auth import __version__ as version
 from social_auth.utils import setting
 
-from app.models import Project, JenkinsBuild
+from github_jenkins.app.models import Project, JenkinsBuild
 
 
 def home(request):
@@ -51,16 +51,6 @@ def rebuild_pr(request, owner, project, pr):
     build = JenkinsBuild.new_from_project_pr(project_, pull_request)
     build.trigger_jenkins()
     return redirect('pull_requests', owner, project)
-
-
-@login_required
-def done(request):
-    """Login complete view, displays user data"""
-    ctx = {
-        'version': version,
-        'last_login': request.session.get('social_auth_last_login_backend')
-    }
-    return render_to_response('done.html', ctx, RequestContext(request))
 
 
 def error(request):

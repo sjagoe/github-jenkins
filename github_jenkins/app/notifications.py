@@ -1,15 +1,10 @@
 import json
 import logging
 
-from django.http import HttpResponse #, HttpResponseRedirect
-# from django.contrib.auth import logout as auth_logout
-# from django.contrib.auth.decorators import login_required
-# from django.template import RequestContext
-# from django.shortcuts import render_to_response, redirect
-# from django.contrib.messages.api import get_messages
-
-from app.models import Project, JenkinsBuild
+from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+
+from github_jenkins.app.models import Project, JenkinsBuild
 
 logger = logging.getLogger(__name__)
 

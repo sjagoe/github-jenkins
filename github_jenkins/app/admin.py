@@ -1,5 +1,6 @@
 from django.contrib import admin
-from app.models import JenkinsJob, Project
+
+from github_jenkins.app.models import JenkinsJob, Project
 
 
 class JenkinsJobAdmin(admin.ModelAdmin):

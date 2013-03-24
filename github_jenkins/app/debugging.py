@@ -2,8 +2,6 @@ import functools
 import threading
 
 
-
-
 global __profile_lock
 __profile_lock = threading.Lock()
 
