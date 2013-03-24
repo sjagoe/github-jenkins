@@ -177,7 +177,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 
 # LOGIN_URL = '/github-jenkins/accounts/login'
 LOGIN_REDIRECT_URL = '/github-jenkins'
-LOGIN_URL = '/github-jenkins/logout'
+LOGOUT_URL = '/github-jenkins/logout'
 
 
 try:
