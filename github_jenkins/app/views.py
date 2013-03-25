@@ -1,6 +1,6 @@
 import logging
 
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.template import RequestContext
@@ -63,6 +63,23 @@ def pull_requests_body(request, owner, project):
         'project': project_,
     }
     return render_to_response('pull_requests_body.html', ctx,
+                              RequestContext(request))
+
+
+@login_required
+@log_error(logger)
+def pull_request_row(request, owner, project, pr_number):
+    project_ = Project.objects.filter(owner=owner, name=project).all()[0]
+    pr = project_.get_pull_request(request.user, int(pr_number))
+    if pr.merged:
+        return HttpResponse()
+    build = JenkinsBuild.search_pull_request(project_, pr.number)
+    ctx = {
+        'pr': pr,
+        'build': build,
+        'project': project_,
+    }
+    return render_to_response('pull_request_row.html', ctx,
                               RequestContext(request))
 
 

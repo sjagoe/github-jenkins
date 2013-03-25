@@ -1,7 +1,7 @@
 from django.conf.urls.defaults import patterns, url, include
 
 from github_jenkins.app.views import home, logout, error, projects, \
-    pull_requests, rebuild_pr, pull_requests_body
+    pull_requests, rebuild_pr, pull_requests_body, pull_request_row
 from github_jenkins.app.notifications import jenkins, github
 
 
@@ -13,6 +13,8 @@ urlpatterns = patterns(
         name='pull_requests'),
     url(r'^pull_requests/(?P<owner>[^/]+?)/(?P<project>[^/]+?)/update/$',
         pull_requests_body, name='update_pull_requests'),
+    url(r'^pull_requests/(?P<owner>[^/]+?)/(?P<project>[^/]+?)/update/(?P<pr_number>\d+)/$',
+        pull_request_row, name='update_pull_request'),
     url(r'^build/(?P<owner>[^/]+?)/(?P<project>[^/]+?)/(?P<pr>\d+)/$', rebuild_pr,
         name='rebuild'),
     url(r'^error/$', error, name='error'),
