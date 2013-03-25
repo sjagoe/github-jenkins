@@ -8,7 +8,6 @@ from django.shortcuts import render_to_response, redirect
 from django.contrib.messages.api import get_messages
 
 from social_auth import __version__ as version
-from social_auth.utils import setting
 
 from github_jenkins.app.models import Project, JenkinsBuild
 from github_jenkins.app.debugging import log_error
@@ -49,6 +48,21 @@ def pull_requests(request, owner, project):
         'project': project_,
     }
     return render_to_response('pull_requests.html', ctx,
+                              RequestContext(request))
+
+
+@login_required
+@log_error(logger)
+def pull_requests_body(request, owner, project):
+    print owner, project
+    project_ = Project.objects.filter(owner=owner, name=project).all()[0]
+    pr_builds = [(pr, JenkinsBuild.search_pull_request(project_, pr.number))
+                 for pr in project_.get_pull_requests(request.user)]
+    ctx = {
+        'pr_builds': pr_builds,
+        'project': project_,
+    }
+    return render_to_response('pull_requests_body.html', ctx,
                               RequestContext(request))
 
 
