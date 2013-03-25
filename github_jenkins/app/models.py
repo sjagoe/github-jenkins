@@ -150,7 +150,9 @@ class JenkinsBuild(models.Model):
     def search_pull_request(cls, project, pr_number, build_number=None):
         query = cls.objects.filter(project=project, pull_request=pr_number)
         if build_number is not None:
-            query = query.filter(build_number=build_number)
+            subquery = query.filter(build_number=build_number)
+            if subquery.count() > 0:
+                query = subquery
         query = query.filter(
             id=cls.objects.filter(project=project, pull_request=pr_number).\
             aggregate(models.Max('id'))['id__max'])

@@ -14,12 +14,17 @@ def _get_build(project_name, pr_number, build_number=None):
     try:
         project = Project.get(project_name)
     except Exception:
+        logger.exception()
         return None
     if project is None:
+        logger.info('project not found: {0!r}'.format(
+            project_name))
         return None
     build = JenkinsBuild.search_pull_request(
         project, int(pr_number), build_number=build_number)
     if build is None:
+        logger.info('Build not found: PR {0}, build {1}'.format(
+            pr_number, build_number))
         return None
     return build
 
