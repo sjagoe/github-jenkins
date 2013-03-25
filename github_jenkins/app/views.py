@@ -1,3 +1,5 @@
+import logging
+
 from django.http import HttpResponseRedirect
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
@@ -9,8 +11,12 @@ from social_auth import __version__ as version
 from social_auth.utils import setting
 
 from github_jenkins.app.models import Project, JenkinsBuild
+from github_jenkins.app.debugging import log_error
+
+logger = logging.getLogger(__name__)
 
 
+@log_error(logger)
 def home(request):
     """Home view, displays login mechanism"""
     if request.user.is_authenticated():
@@ -21,6 +27,7 @@ def home(request):
 
 
 @login_required
+@log_error(logger)
 def projects(request):
     """Displays projects"""
     ctx = {
@@ -32,6 +39,7 @@ def projects(request):
 
 
 @login_required
+@log_error(logger)
 def pull_requests(request, owner, project):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
     pr_builds = [(pr, JenkinsBuild.search_pull_request(project_, pr.number))
@@ -45,6 +53,7 @@ def pull_requests(request, owner, project):
 
 
 @login_required
+@log_error(logger)
 def rebuild_pr(request, owner, project, pr):
     project_ = Project.objects.filter(owner=owner, name=project).only()[0]
     pull_request = project_.get_pull_request(request.user, int(pr))
@@ -53,6 +62,7 @@ def rebuild_pr(request, owner, project, pr):
     return redirect('pull_requests', owner, project)
 
 
+@log_error(logger)
 def error(request):
     """Error view"""
     messages = get_messages(request)
@@ -61,6 +71,7 @@ def error(request):
                               RequestContext(request))
 
 
+@log_error(logger)
 def logout(request):
     """Logs out user"""
     auth_logout(request)

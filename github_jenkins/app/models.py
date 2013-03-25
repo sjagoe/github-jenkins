@@ -1,11 +1,16 @@
+import logging
 import urllib
+
+import github
+import requests
 
 from django.db import models
 from django.contrib.auth.models import User
 
-import github
+from github_jenkins.app.debugging import log_error
 
-import requests
+
+logger = logging.getLogger(__name__)
 
 
 def get_gh(user):
@@ -132,6 +137,7 @@ class JenkinsBuild(models.Model):
 
     @classmethod
     def new_from_project_pr(cls, project, pr):
+        logger.info('Creating build for {0} at {1}'.format(pr.number, pr.head.sha))
         build = JenkinsBuild(project=project,
                              pull_request=pr.number,
                              pull_request_url=pr.issue_url,
@@ -173,6 +179,7 @@ class JenkinsBuild(models.Model):
                 self.build_status = JenkinsBuild.SUCCESSFUL
         self.save()
 
+    @log_error(logger)
     def trigger_jenkins(self):
         if self.build_status != JenkinsBuild.WAITING:
             raise Exception('Build already trigerred')
@@ -180,6 +187,7 @@ class JenkinsBuild(models.Model):
         response = requests.post(
             self.jenkins_trigger_url, auth=(jenkins.username, jenkins.password))
 
+    @log_error(logger)
     def notify_github(self):
         if self.build_status == JenkinsBuild.WAITING:
             status = 'pending'
@@ -200,7 +208,13 @@ class JenkinsBuild(models.Model):
             raise Exception('Did not understand status {!r}'.format(
                 self.build_status))
         text = text.format(build=self.build_number)
+        logger.info('Notifying GitHub of status for PR #{0}, {1!r}: {2!r}. {3!r}'.format(
+            self.pull_request, self.commit, status, text))
         gh = get_gh(self.project.user)
         repo = gh.get_repo(self.head_repository) # ??
         commit = repo.get_commit(self.commit)
-        commit.create_status(status, self.build_url, text)
+        if self.build_url is not None:
+            commit.create_status(status, target_url=self.build_url,
+                                 description=text)
+        else:
+            commit.create_status(status, description=text)

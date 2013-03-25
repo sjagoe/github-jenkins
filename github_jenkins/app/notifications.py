@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from github_jenkins.app.models import Project, JenkinsBuild
+from github_jenkins.app.debugging import log_error
 
 logger = logging.getLogger(__name__)
 
@@ -23,15 +24,20 @@ def _get_build(project_name, pr_number):
 
 
 @csrf_exempt
+@log_error(logger)
 def jenkins(request):
     parameters = json.loads(request.body)
 
     build_phase = parameters['build']['phase']
-    if build_phase not in ('STARTED', 'COMPLETED'):
-        return HttpResponse(status=204)
 
     pr_number = parameters['build']['parameters']['PR_NUMBER']
     project_name = parameters['build']['parameters']['GIT_BASE_REPO']
+
+    logger.info('Received Jenkins build update: PR #{0}, {1}: {2}'.format(
+        pr_number, project_name, build_phase))
+
+    if build_phase not in ('STARTED', 'COMPLETED'):
+        return HttpResponse(status=204)
 
     build = _get_build(project_name, pr_number)
     if build is None:
@@ -44,21 +50,26 @@ def jenkins(request):
 
 
 @csrf_exempt
+@log_error(logger)
 def github(request):
     data = json.loads(request.body)
     action = data['action']
-    if action not in ('opened', 'synchronize'):
-        return HttpResponse(status=204)
     pull_request = data['pull_request']
+    pr_number = int(pull_request["number"])
+    pr_url = pull_request["html_url"]
 
     project_name = pull_request['base']['repo']['full_name']
+
+    logger.info('Received event from GitHub: PR #{0}, {1}: {2}'.format(
+        pr_number, project_name, action))
+
+    if action not in ('opened', 'synchronize'):
+        return HttpResponse(status=204)
+
     project = Project.get(project_name)
     if project is None:
         logger.warn('Project {0!r} not found'.format(project_name))
         return HttpResponse(status=404)
-
-    pr_number = int(pull_request["number"])
-    pr_url = pull_request["html_url"]
 
     try:
         pr = project.get_pull_request(project.user, pr_number)

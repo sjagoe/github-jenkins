@@ -171,6 +171,14 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'DEBUG',
         },
+        'github_jenkins.app.views': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'github_jenkins.app.models': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
     }
 }
 
