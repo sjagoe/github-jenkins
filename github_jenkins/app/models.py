@@ -149,17 +149,19 @@ class JenkinsBuild(models.Model):
     @classmethod
     def search_pull_request(cls, project, pr_number):
         query = cls.objects.filter(project=project, pull_request=pr_number).\
-            filter(build_number=cls.objects.filter(
-                project=project, pull_request=pr_number).\
-                   aggregate(models.Max('build_number'))['build_number__max'])
+            filter(id=cls.objects.filter(project=project, pull_request=pr_number).\
+                   aggregate(models.Max('id'))['id__max'])
+            # FIXME?
+            # filter(build_number=cls.objects.filter(
+            #     project=project, pull_request=pr_number).\
+            #        aggregate(models.Max('build_number'))['build_number__max'])
         count = query.count()
         if count == 0:
             return None
         elif count == 1:
             return query.all()[0]
         elif count > 1:
-            return query.filter(id=cls.objects.filter(pull_request=pr_number).\
-                                aggregate(models.Max('id'))['id__max']).all()[0]
+            raise Exception('Multiple identical primary keys?')
 
     def update_from_jenkins_notification(self, parameters):
         build_phase = parameters['build']['phase']
