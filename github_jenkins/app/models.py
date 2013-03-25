@@ -147,10 +147,13 @@ class JenkinsBuild(models.Model):
         return build
 
     @classmethod
-    def search_pull_request(cls, project, pr_number):
-        query = cls.objects.filter(project=project, pull_request=pr_number).\
-            filter(id=cls.objects.filter(project=project, pull_request=pr_number).\
-                   aggregate(models.Max('id'))['id__max'])
+    def search_pull_request(cls, project, pr_number, build_number=None):
+        query = cls.objects.filter(project=project, pull_request=pr_number)
+        if build_number is not None:
+            query = query.filter(build_number=build_number)
+        query = query.filter(
+            id=cls.objects.filter(project=project, pull_request=pr_number).\
+            aggregate(models.Max('id'))['id__max'])
             # FIXME?
             # filter(build_number=cls.objects.filter(
             #     project=project, pull_request=pr_number).\

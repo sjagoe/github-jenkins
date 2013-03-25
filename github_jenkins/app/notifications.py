@@ -10,14 +10,15 @@ from github_jenkins.app.debugging import log_error
 logger = logging.getLogger(__name__)
 
 
-def _get_build(project_name, pr_number):
+def _get_build(project_name, pr_number, build_number=None):
     try:
         project = Project.get(project_name)
     except Exception:
         return None
     if project is None:
         return None
-    build = JenkinsBuild.search_pull_request(project, int(pr_number))
+    build = JenkinsBuild.search_pull_request(
+        project, int(pr_number), build_number=build_number)
     if build is None:
         return None
     return build
@@ -39,7 +40,8 @@ def jenkins(request):
     if build_phase not in ('STARTED', 'COMPLETED'):
         return HttpResponse(status=204)
 
-    build = _get_build(project_name, pr_number)
+    build_number = parameters['build']['number']
+    build = _get_build(project_name, pr_number, int(build_number))
     if build is None:
         return HttpResponse('Unknown pull request', status=404)
 
