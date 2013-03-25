@@ -37,12 +37,19 @@ def projects(request):
     return render_to_response('projects.html', ctx, RequestContext(request))
 
 
+def _make_pr_id(pr):
+    return 'pull-request-{0}'.format(pr.number)
+
+
 @login_required
 @log_error(logger)
 def pull_requests(request, owner, project):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
-    pr_builds = [(pr, JenkinsBuild.search_pull_request(project_, pr.number))
-                 for pr in project_.get_pull_requests(request.user)]
+    pr_builds = [
+        (_make_pr_id(pr), pr, JenkinsBuild.search_pull_request(
+            project_, pr.number))
+        for pr in project_.get_pull_requests(request.user)
+    ]
     ctx = {
         'pr_builds': pr_builds,
         'project': project_,
@@ -54,10 +61,12 @@ def pull_requests(request, owner, project):
 @login_required
 @log_error(logger)
 def pull_requests_body(request, owner, project):
-    print owner, project
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
-    pr_builds = [(pr, JenkinsBuild.search_pull_request(project_, pr.number))
-                 for pr in project_.get_pull_requests(request.user)]
+    pr_builds = [
+        (_make_pr_id(pr), pr, JenkinsBuild.search_pull_request(
+            project_, pr.number))
+        for pr in project_.get_pull_requests(request.user)
+    ]
     ctx = {
         'pr_builds': pr_builds,
         'project': project_,
@@ -75,6 +84,7 @@ def pull_request_row(request, owner, project, pr_number):
         return HttpResponse()
     build = JenkinsBuild.search_pull_request(project_, pr.number)
     ctx = {
+        'pr_id': _make_pr_id(pr),
         'pr': pr,
         'build': build,
         'project': project_,
