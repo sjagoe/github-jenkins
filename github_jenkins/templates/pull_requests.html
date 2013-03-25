@@ -7,7 +7,7 @@
   $(document).ready(function() {
     var reload_function = function() {
       $("#pull-request-table-body").load("{% url "update_pull_requests" owner=project.owner project=project.name %}");
-      var delay = 300000 + (Math.random() * 120000);
+      var delay = 180000 + (Math.random() * 120000);
       window.setTimeout(reload_function, delay);
     };
     window.setTimeout(reload_function, 300000);
