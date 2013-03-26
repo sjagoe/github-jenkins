@@ -41,7 +41,7 @@ $(document).ready(function() {
             $("#" + build_number_id).replaceWith("<td id=\"" + build_number_id + "\"/>");
             $("#" + build_status_id).replaceWith("<td id=\"" + build_status_id + "\">Waiting</td>");
             $.get(this.href).done(function() {
-                window.setTimeout(reload_this_row, 1000);
+                window.setTimeout(reload_this_row, 5000);
             });
         });
 
