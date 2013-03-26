@@ -16,7 +16,23 @@
       $.getJSON("{% url "pull_requests" owner=project.owner project=project.name %}" + "new/" + max_pr_number + "/")
         .done(function(json) {
           $("#pull-request-table-body").data("max-pr", json.max_pr_number);
-          $("#pull-request-table-body tr:first").after(json.data);
+          var previous_row = $("#pull-request-table-body tr:first");
+          $.each(json.rows, function(index, elem) {
+            var tr = $("<tr id=\"" + elem.pr_id + "\"></tr>").insertAfter(previous_row);
+            tr.append("<td><a href=\"" + elem.pr_issue_url + "\">" + elem.pr_number + "</a></td>");
+            tr.append("<td>" + elem.pr_title + "</td>");
+            if (elem.build_number === null) {
+              tr.append("<td/>");
+            } else {
+              tr.append("<td><a href=\"" + elem.build_url + "\">" + elem.build_number + "</a></td>");
+            };
+            if (elem.build_status === null) {
+              tr.append("<td/>");
+            } else {
+              tr.append("<td>" + elem.build_status + "</td>");
+            };
+            tr.append("<td><a href=\"" + elem.build_now_url + "\">Build now</a></td>");
+          });
           var delay = make_short_delay();
           window.setTimeout(get_new_pull_requests, delay);
         })

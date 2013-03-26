@@ -124,10 +124,28 @@ def new_pull_request_rows(request, owner, project, old_max_pr_number):
         'project': project_,
     })
 
-    template = loader.get_template('pull_request_rows.html')
-    response_data = template.render(ctx)
-    response = {'data': response_data,
-                'max_pr_number': max_pr}
+    response = {
+        'rows': [
+            {
+                'pr_id': pr_id,
+                'pr_issue_url': pr.issue_url,
+                'pr_number': pr.number,
+                'pr_title': pr.title,
+                'build_url': build.build_url if build is not None else None,
+                'build_number': build.build_number if build is not None else None,
+                'build_status': build.build_status if build is not None else None,
+                'build_now_url': reverse(
+                    'rebuild', kwargs={
+                        'owner': project_.owner,
+                        'project': project_.name,
+                        'pr': pr.number,
+                    }),
+            }
+            for pr_id, pr, build in pr_builds
+        ],
+        'max_pr_number': max_pr,
+    }
+
     return HttpResponse(json.dumps(response), content_type='application/json')
 
 
