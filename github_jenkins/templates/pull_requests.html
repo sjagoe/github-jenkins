@@ -32,6 +32,7 @@
               tr.append("<td>" + elem.build_status + "</td>");
             };
             tr.append("<td><a href=\"" + elem.build_now_url + "\">Build now</a></td>");
+            previous_row = tr;
           });
           var delay = make_short_delay();
           window.setTimeout(get_new_pull_requests, delay);

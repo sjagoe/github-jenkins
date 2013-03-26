@@ -117,7 +117,7 @@ def new_pull_request_rows(request, owner, project, old_max_pr_number):
     if len(pr_builds) > 0:
         max_pr = max(pr.number for _, pr, _ in pr_builds)
     else:
-        return HttpResponse(status=404)
+        return HttpResponse('{}', status=404, content_type='application/json')
 
     ctx = Context({
         'pr_builds': pr_builds,
