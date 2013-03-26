@@ -135,7 +135,7 @@ def rebuild_pr(request, owner, project, pr):
     pull_request = project_.get_pull_request(request.user, int(pr))
     build = JenkinsBuild.new_from_project_pr(project_, pull_request)
     build.trigger_jenkins()
-    return redirect('pull_requests', owner, project)
+    return HttpResponse(status=204, content_type='application/json')
 
 
 @log_error(logger)
