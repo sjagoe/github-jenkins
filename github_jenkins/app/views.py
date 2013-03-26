@@ -98,7 +98,6 @@ def pull_request_row(request, owner, project, pr_number):
     return render_to_response('pull_request_row.html', ctx,
                               RequestContext(request))
 
-from django.template import loader, Context
 
 @login_required
 @log_error(logger)
@@ -118,11 +117,6 @@ def new_pull_request_rows(request, owner, project, old_max_pr_number):
         max_pr = max(pr.number for _, pr, _ in pr_builds)
     else:
         return HttpResponse('{}', status=404, content_type='application/json')
-
-    ctx = Context({
-        'pr_builds': pr_builds,
-        'project': project_,
-    })
 
     response = {
         'rows': [

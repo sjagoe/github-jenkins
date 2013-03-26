@@ -32,6 +32,21 @@
               tr.append("<td>" + elem.build_status + "</td>");
             };
             tr.append("<td><a href=\"" + elem.build_now_url + "\">Build now</a></td>");
+
+            var reload_this_row = function() {
+              $.get("{% url "pull_requests" owner=project.owner project=project.name %}" + "update/" + elem.pr_number + "/")
+                .done(function(data) {
+                   $("#" + elem.pr_id).replaceWith(data);
+                   var delay = make_short_delay();
+                   window.setTimeout(reload_this_row, delay);
+                })
+                .fail(function() {
+                   $("#" + elem.pr_id).remove();
+                });
+            };
+            var delay = make_short_delay();
+            window.setTimeout(reload_this_row, delay);
+
             previous_row = tr;
           });
           var delay = make_short_delay();
