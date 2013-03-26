@@ -72,6 +72,7 @@ STATIC_URL = '/github-jenkins/static/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
+    os.path.join(os.path.dirname(__file__), 'static'),
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
@@ -193,6 +194,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     'django.core.context_processors.debug',
     'django.core.context_processors.i18n',
     'django.core.context_processors.media',
+    'django.core.context_processors.static',
     'django.contrib.messages.context_processors.messages',
     'social_auth.context_processors.social_auth_by_type_backends',
 )

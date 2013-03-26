@@ -52,33 +52,34 @@ def _get_pr_build_list(project, pull_requests):
 @log_error(logger)
 def pull_requests(request, owner, project):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
-    pr_builds = _get_pr_build_list(
-        project_, project_.get_pull_requests(request.user))
-    if len(pr_builds) > 0:
-        max_pr = max(pr.number for _, pr, _ in pr_builds)
-    else:
-        max_pr = 0
-    ctx = {
-        'max_pr_number': max_pr,
-        'pr_builds': pr_builds,
-        'project': project_,
-    }
+    ctx = {'project': project_}
     return render_to_response('pull_requests.html', ctx,
                               RequestContext(request))
 
 
-@login_required
-@log_error(logger)
-def pull_requests_body(request, owner, project):
-    project_ = Project.objects.filter(owner=owner, name=project).all()[0]
-    pr_builds = _get_pr_build_list(
-        project_, project_.get_pull_requests(request.user))
-    ctx = {
-        'pr_builds': pr_builds,
-        'project': project_,
+def _get_row_dict(project, pr, build):
+    return {
+        'open': pr.state == 'open',
+        'pr_id': _make_pr_id(pr),
+        'pr_issue_url': pr.issue_url,
+        'pr_number': pr.number,
+        'pr_title': pr.title,
+        'build_url': build.build_url if build is not None else None,
+        'build_number': build.build_number if build is not None else None,
+        'build_status': build.build_status if build is not None else None,
+        'build_now_url': reverse(
+            'rebuild', kwargs={
+                'owner': project.owner,
+                'project': project.name,
+                'pr': pr.number,
+            }),
+        'update_url': reverse(
+            'update_pull_request', kwargs={
+                'owner': project.owner,
+                'project': project.name,
+                'pr_number': pr.number,
+            }),
     }
-    return render_to_response('pull_requests_body.html', ctx,
-                              RequestContext(request))
 
 
 @login_required
@@ -86,17 +87,12 @@ def pull_requests_body(request, owner, project):
 def pull_request_row(request, owner, project, pr_number):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
     pr = project_.get_pull_request(request.user, int(pr_number))
-    if pr.merged:
-        return HttpResponse(status=404)
+    if pr.state != 'open':
+        data = {'open': False, 'pr_id': _make_pr_id(pr)}
+        return HttpResponse(json.dumps(data), content_type='application/json')
     build = JenkinsBuild.search_pull_request(project_, pr.number)
-    ctx = {
-        'pr_id': _make_pr_id(pr),
-        'pr': pr,
-        'build': build,
-        'project': project_,
-    }
-    return render_to_response('pull_request_row.html', ctx,
-                              RequestContext(request))
+    row = _get_row_dict(project_, pr, build)
+    return HttpResponse(json.dumps(row), content_type='application/json')
 
 
 @login_required
@@ -116,28 +112,17 @@ def new_pull_request_rows(request, owner, project, old_max_pr_number):
     if len(pr_builds) > 0:
         max_pr = max(pr.number for _, pr, _ in pr_builds)
     else:
-        return HttpResponse('{}', status=404, content_type='application/json')
+        max_pr = old_max_pr_number
 
     response = {
-        'rows': [
-            {
-                'pr_id': pr_id,
-                'pr_issue_url': pr.issue_url,
-                'pr_number': pr.number,
-                'pr_title': pr.title,
-                'build_url': build.build_url if build is not None else None,
-                'build_number': build.build_number if build is not None else None,
-                'build_status': build.build_status if build is not None else None,
-                'build_now_url': reverse(
-                    'rebuild', kwargs={
-                        'owner': project_.owner,
-                        'project': project_.name,
-                        'pr': pr.number,
-                    }),
-            }
-            for pr_id, pr, build in pr_builds
-        ],
-        'max_pr_number': max_pr,
+        'rows': [_get_row_dict(project_, pr, build)
+                 for pr_id, pr, build in pr_builds],
+        'update_url': reverse(
+            'new_pull_requests', kwargs={
+                'owner': project_.owner,
+                'project': project_.name,
+                'old_max_pr_number': max_pr,
+            }),
     }
 
     return HttpResponse(json.dumps(response), content_type='application/json')

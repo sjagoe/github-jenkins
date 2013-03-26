@@ -1,7 +1,0 @@
-      <tr id="{{ pr_id }}" class="{% cycle 'odd' 'even' %}">
-        <td><a href="{{ pr.issue_url }}">{{ pr.number }}</a></td>
-        <td>{{ pr.title }}</td>
-        <td>{% if build and build.build_number %}<a href="{{ build.build_url }}">{{ build.build_number }}</a>{% endif %}</td>
-        <td>{% if build %}{{ build.build_status }}{% endif %}</td>
-        <td><a href="{% url "rebuild" owner=project.owner project=project.name pr=pr.number %}">Build now</a></td>
-      </tr>
