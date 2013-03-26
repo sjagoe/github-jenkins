@@ -95,5 +95,6 @@ def github(request):
 
     build = JenkinsBuild.new_from_project_pr(project, pr)
     build.trigger_jenkins()
+    build.notify_github()
 
     return HttpResponse(status=204)
