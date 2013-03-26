@@ -1,8 +1,10 @@
+import json
 import logging
 
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
+from django.core.urlresolvers import reverse
 from django.template import RequestContext
 from django.shortcuts import render_to_response, redirect
 from django.contrib.messages.api import get_messages
@@ -41,16 +43,23 @@ def _make_pr_id(pr):
     return 'pull-request-{0}'.format(pr.number)
 
 
+def _get_pr_build_list(project, pull_requests):
+    return [(_make_pr_id(pr), pr, JenkinsBuild.search_pull_request(
+        project, pr.number)) for pr in pull_requests]
+
+
 @login_required
 @log_error(logger)
 def pull_requests(request, owner, project):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
-    pr_builds = [
-        (_make_pr_id(pr), pr, JenkinsBuild.search_pull_request(
-            project_, pr.number))
-        for pr in project_.get_pull_requests(request.user)
-    ]
+    pr_builds = _get_pr_build_list(
+        project_, project_.get_pull_requests(request.user))
+    if len(pr_builds) > 0:
+        max_pr = max(pr.number for _, pr, _ in pr_builds)
+    else:
+        max_pr = 0
     ctx = {
+        'max_pr_number': max_pr,
         'pr_builds': pr_builds,
         'project': project_,
     }
@@ -62,11 +71,8 @@ def pull_requests(request, owner, project):
 @log_error(logger)
 def pull_requests_body(request, owner, project):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
-    pr_builds = [
-        (_make_pr_id(pr), pr, JenkinsBuild.search_pull_request(
-            project_, pr.number))
-        for pr in project_.get_pull_requests(request.user)
-    ]
+    pr_builds = _get_pr_build_list(
+        project_, project_.get_pull_requests(request.user))
     ctx = {
         'pr_builds': pr_builds,
         'project': project_,
@@ -81,7 +87,7 @@ def pull_request_row(request, owner, project, pr_number):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
     pr = project_.get_pull_request(request.user, int(pr_number))
     if pr.merged:
-        return HttpResponse()
+        return HttpResponse(status=404)
     build = JenkinsBuild.search_pull_request(project_, pr.number)
     ctx = {
         'pr_id': _make_pr_id(pr),
@@ -91,6 +97,38 @@ def pull_request_row(request, owner, project, pr_number):
     }
     return render_to_response('pull_request_row.html', ctx,
                               RequestContext(request))
+
+from django.template import loader, Context
+
+@login_required
+@log_error(logger)
+def new_pull_request_rows(request, owner, project, old_max_pr_number):
+    old_max_pr_number = int(old_max_pr_number)
+    project_ = Project.objects.filter(owner=owner, name=project).all()[0]
+
+    prs = []
+    for pr in project_.get_pull_requests(request.user):
+        if pr.number <= old_max_pr_number:
+            break
+        prs.append(pr)
+
+    pr_builds = _get_pr_build_list(project_, prs)
+
+    if len(pr_builds) > 0:
+        max_pr = max(pr.number for _, pr, _ in pr_builds)
+    else:
+        return HttpResponse(status=404)
+
+    ctx = Context({
+        'pr_builds': pr_builds,
+        'project': project_,
+    })
+
+    template = loader.get_template('pull_request_rows.html')
+    response_data = template.render(ctx)
+    response = {'data': response_data,
+                'max_pr_number': max_pr}
+    return HttpResponse(json.dumps(response), content_type='application/json')
 
 
 @login_required
