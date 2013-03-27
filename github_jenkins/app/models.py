@@ -6,6 +6,7 @@ import requests
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 
 from github_jenkins.app.debugging import log_error
 
@@ -17,27 +18,6 @@ def get_gh(user):
     auth = user.social_auth.all()[0]
     token = auth.tokens['access_token']
     return github.Github(token)
-
-
-# def get_projects(user):
-#     gh = get_gh(user)
-#     for project in Project.objects.all():
-#         yield gh.get_repo(project.full_name)
-
-
-class CustomUserManager(models.Manager):
-    def create_user(self, username, email):
-        return self.model._default_manager.create(username=username)
-
-
-class CustomUser(models.Model):
-    username = models.CharField(max_length=128)
-    last_login = models.DateTimeField(blank=True, null=True)
-
-    objects = CustomUserManager()
-
-    def is_authenticated(self):
-        return True
 
 
 class JenkinsJob(models.Model):
@@ -121,6 +101,62 @@ class Project(models.Model):
         unique_together = ('owner', 'name')
 
 
+class PullRequest(models.Model):
+
+    number = models.IntegerField(primary_key=True)
+
+    project = models.ForeignKey(Project)
+
+    title = models.CharField(max_length=8192)
+    html_url = models.CharField(max_length=4096)
+    issue_url = models.CharField(max_length=4096)
+    head_repo = models.CharField(max_length=1024)
+    head_sha = models.CharField(max_length=40)
+    open = models.BooleanField()
+
+    mergeable = models.BooleanField()
+    merged = models.BooleanField()
+
+    @classmethod
+    def update_pull_request(cls, pr_number, project_name):
+        project = Project.get(project_name)
+        if project is None:
+            logger.warn('Project {0!r} not found'.format(project_name))
+            return None
+
+        try:
+            source_pr = project.get_pull_request(project.user, pr_number)
+        except Exception:
+            if logger.level == logging.DEBUG:
+                exc_info = True
+            else:
+                exc_info = False
+            message = 'Pull request {0!r} not found'.format(pr_number)
+            logger.warn(message, exc_info=exc_info)
+            return None
+
+        if source_pr.html_url != pr_url:
+            logger.warn(('HTML URL for the pull request does not match what GutHub tells '
+                         'us: {0!r} != {1!r}').format(html_url, source_pr.html_url))
+            return None
+
+        try:
+            pr = cls.objects.get(number=pr_number)
+        except ObjectDoesNotExist:
+            pr = PullRequest(number=source_pr.number)
+
+        pr.title = source_pr.title
+        pr.html_url = source_pr.html_url
+        pr.issue_url = source_pr.issue_url
+        pr.head_repo = source_pr.head.repo.full_name
+        pr.head_sha = source_pr.head.sha
+        pr.open = source_pr.state == 'open'
+        pr.mergeable = source_pr.mergeable
+        pr.merged = source_pr.merged
+        pr.save()
+        return pr
+
+
 class JenkinsBuild(models.Model):
 
     WAITING = 'Waiting'
@@ -135,15 +171,12 @@ class JenkinsBuild(models.Model):
     build_url = models.CharField(max_length=4096, null=True)
     build_status = models.CharField(max_length=16, default=WAITING)
 
-    pull_request = models.IntegerField(db_index=True)
-    pull_request_url = models.CharField(max_length=4096)
-    commit = models.CharField(max_length=40)
-    head_repository = models.CharField(max_length=512)
+    pull_request = models.ForeignKey(PullRequest)
 
     def __repr__(self):
         return u'<JenkinsBuild project={project}, build_number={num}, pr={pr}>'.\
             format(project=self.project, num=self.build_number,
-                   pr=self.pull_request)
+                   pr=self.pull_request.number)
 
     @property
     def jenkins_trigger_url(self):
@@ -151,35 +184,35 @@ class JenkinsBuild(models.Model):
         return '{0}/buildWithParameters?{1}'.format(
             project.jenkins_job.url,
             urllib.urlencode({'GIT_BASE_REPO': project.full_name,
-                              'GIT_HEAD_REPO': self.head_repository,
-                              'GIT_SHA1': self.commit,
+                              'GIT_HEAD_REPO': self.pull_request.head_repo,
+                              'GIT_SHA1': self.pull_request.head_sha,
                               'GITHUB_URL': self.pull_request_url,
-                              'PR_NUMBER': self.pull_request}))
+                              'PR_NUMBER': self.pull_request.number}))
 
     @classmethod
     def new_from_project_pr(cls, project, pr):
         logger.info('Creating build for {0} at {1}'.format(pr.number, pr.head.sha))
-        build = JenkinsBuild(project=project,
-                             pull_request=pr.number,
-                             pull_request_url=pr.issue_url,
-                             commit=pr.head.sha,
-                             head_repository=pr.head.repo.full_name)
+        build = JenkinsBuild(project=project, pull_request=pr)
         build.save()
         return build
 
     @classmethod
     def search_pull_request(cls, project, pr_number, build_number=None):
-        query = cls.objects.filter(project=project, pull_request=pr_number)
+        try:
+            pr = PullRequest.objects.get(number=pr_number)
+        except ObjectDoesNotExist:
+            return None
+        query = cls.objects.filter(project=project, pull_request=pr)
         if build_number is not None:
             subquery = query.filter(build_number=build_number)
             if subquery.count() > 0:
                 query = subquery
         query = query.filter(
-            id=cls.objects.filter(project=project, pull_request=pr_number).\
+            id=cls.objects.filter(project=project, pull_request=pr).\
             aggregate(models.Max('id'))['id__max'])
             # FIXME?
             # filter(build_number=cls.objects.filter(
-            #     project=project, pull_request=pr_number).\
+            #     project=project, pull_request=pr).\
             #        aggregate(models.Max('build_number'))['build_number__max'])
         count = query.count()
         if count == 0:
@@ -237,9 +270,9 @@ class JenkinsBuild(models.Model):
                 self.build_status))
         text = text.format(build=self.build_number)
         logger.info('Notifying GitHub of status for PR #{0}, {1!r}: {2!r}. {3!r}'.format(
-            self.pull_request, self.commit, status, text))
+            self.pull_request.number, self.pull_request.head_sha, status, text))
         gh = get_gh(self.project.user)
-        repo = gh.get_repo(self.head_repository) # ??
+        repo = gh.get_repo(self.pull_request.head_repo) # ??
         commit = repo.get_commit(self.commit)
         if self.build_url is not None:
             commit.create_status(status, target_url=self.build_url,

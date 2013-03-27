@@ -4,7 +4,7 @@ import logging
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from github_jenkins.app.models import Project, JenkinsBuild
+from github_jenkins.app.models import Project, JenkinsBuild, PullRequest
 from github_jenkins.app.debugging import log_error
 
 logger = logging.getLogger(__name__)
@@ -63,35 +63,16 @@ def github(request):
     action = data['action']
     pull_request = data['pull_request']
     pr_number = int(pull_request["number"])
-    pr_url = pull_request["html_url"]
-
     project_name = pull_request['base']['repo']['full_name']
-
     logger.info('Received event from GitHub: PR #{0}, {1}: {2}'.format(
         pr_number, project_name, action))
 
+    pr = PullRequest.update_pull_request(pr_number, project_name)
+    if pr is None:
+        return HttpResponse(status=404)
+
     if action not in ('opened', 'synchronize'):
         return HttpResponse(status=204)
-
-    project = Project.get(project_name)
-    if project is None:
-        logger.warn('Project {0!r} not found'.format(project_name))
-        return HttpResponse(status=404)
-
-    try:
-        pr = project.get_pull_request(project.user, pr_number)
-    except Exception:
-        if logger.level == logging.DEBUG:
-            exc_info = True
-        else:
-            exc_info = False
-        message = 'Pull request {0!r} not found'.format(pr_number)
-        logger.warn(message, exc_info=exc_info)
-        return HttpResponse(message, status=404)
-    if pr.html_url != pr_url:
-        logger.warn(('HTML URL for the pull request does not match what GutHub tells '
-                     'us: {0!r} != {1!r}').format(html_url, pr.html_url))
-        return HttpResponse(status=404)
 
     build = JenkinsBuild.new_from_project_pr(project, pr)
     build.trigger_jenkins()
