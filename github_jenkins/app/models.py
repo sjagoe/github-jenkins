@@ -132,6 +132,9 @@ class PullRequest(models.Model):
     class Meta:
         unique_together = ('project', 'number')
 
+    def __unicode__(self):
+        return u'{0}, {1}'.format(self.project.full_name, self.number)
+
     @classmethod
     def update_pull_request(cls, pr_number, project_name, html_url):
         project = Project.get(project_name)
