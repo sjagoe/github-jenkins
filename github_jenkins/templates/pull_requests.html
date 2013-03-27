@@ -8,19 +8,26 @@
 
 {% block content %}
 <div>
-  <h3>Project: {{ project.full_name }}</h3>
-  <table id="pull-request-table-body">
-    <tr class="even">
-      <th>Pull Request ID</th>
-      <th>Description</th>
-      <th>Build #</th>
-      <th>Status</th>
-      <th/>
-    </tr>
-  </table>
+  <a rel="nofollow" class="logout" href="/github-jenkins/logout/">Logout</a>
 </div>
 
 <div>
-  <a rel="nofollow" class="logout" href="/github-jenkins/logout/">Logout</a>
+  <div class="left">
+{% include "project_table.html" %}
+  </div>
+
+  <div class="right">
+    <h3>Project: {{ selected_project.full_name }}</h3>
+    <table id="pull-request-table-body">
+      <tr class="even">
+        <th>Pull Request ID</th>
+        <th>Description</th>
+        <th>Build #</th>
+        <th>Status</th>
+        <th/>
+      </tr>
+    </table>
+  </div>
 </div>
+
 {% endblock %}

@@ -7,23 +7,7 @@
 
 {% block content %}
 <div>
-  <h3>Projects:</h3>
-  <table>
-    <head>
-      <tr class="even">
-        <th>Project Owner</th>
-        <th>Project Name</th>
-      </tr>
-    </head>
-    <body>
-    {% for project in projects %}
-      <tr class="{% cycle 'odd' 'even' %}">
-        <td>{{ project.owner }}</td>
-        <td><a href="{% url "pull_requests" owner=project.owner project=project.name %}">{{ project.name }}</a></td>
-      </tr>
-    {% endfor %}
-    </body>
-  </table>
+{% include "project_table.html" %}
 </div>
 
 <div>

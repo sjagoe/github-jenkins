@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def home(request):
     """Home view, displays login mechanism"""
     if request.user.is_authenticated():
-        return redirect('projects')
+        return redirect('projects/')
     else:
         return render_to_response('home.html', {'version': version},
                                   RequestContext(request))
@@ -33,8 +33,6 @@ def projects(request):
     """Displays projects"""
     ctx = {
         'projects': Project.objects.all(),
-        'version': version,
-        'last_login': request.session.get('social_auth_last_login_backend')
     }
     return render_to_response('projects.html', ctx, RequestContext(request))
 
@@ -52,7 +50,8 @@ def _get_pr_build_list(project, pull_requests):
 @log_error(logger)
 def pull_requests(request, owner, project):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
-    ctx = {'project': project_}
+    ctx = {'selected_project': project_,
+           'projects': Project.objects.all()}
     return render_to_response('pull_requests.html', ctx,
                               RequestContext(request))
 
