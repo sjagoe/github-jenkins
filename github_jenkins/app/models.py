@@ -56,6 +56,9 @@ class JenkinsJob(models.Model):
 
 
 class Project(models.Model):
+    # FIXME
+    HOOK_URL = 'https://uk.enthought.com/github-jenkins/notification/github/'
+
     owner = models.CharField(max_length=128)
     name = models.CharField(max_length=256)
 
@@ -66,15 +69,33 @@ class Project(models.Model):
     def __unicode__(self):
         return u'{0}/{1}'.format(self.owner, self.name)
 
+    def get_hook(self, user):
+        repo = self.get_repo(user)
+        for hook in repo.get_hooks():
+            if hook.config['url'] == self.HOOK_URL:
+                return hook
+        return None
+
+    def install_hook(self, user):
+        if not user.is_staff:
+            return False
+        hook = self.get_hook(user)
+        if hook is None:
+            repo = self.get_repo(user)
+            config = {u'content_type': u'json',
+                      u'url': self.HOOK_URL}
+            repo.create_hook('web', config, [u'pull_request'], True)
+        return True
+
+    def get_repo(self, user):
+         gh = get_gh(user)
+         return gh.get_repo(self.full_name)
+
     def get_pull_requests(self, user):
-        gh = get_gh(user)
-        repo = gh.get_repo(self.full_name)
-        return repo.get_pulls()
+        return self.get_repo(user).get_pulls()
 
     def get_pull_request(self, user, pr_id):
-        gh = get_gh(user)
-        repo = gh.get_repo(self.full_name)
-        return repo.get_pull(pr_id)
+        return self.get_repo(user).get_pull(pr_id)
 
     @classmethod
     def get(cls, owner_or_full_name, name=None):

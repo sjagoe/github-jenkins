@@ -131,11 +131,21 @@ def new_pull_request_rows(request, owner, project, old_max_pr_number):
 @login_required
 @log_error(logger)
 def rebuild_pr(request, owner, project, pr):
-    project_ = Project.objects.filter(owner=owner, name=project).only()[0]
+    project_ = Project.objects.filter(owner=owner, name=project).all()[0]
     pull_request = project_.get_pull_request(request.user, int(pr))
     build = JenkinsBuild.new_from_project_pr(project_, pull_request)
     build.trigger_jenkins()
     return HttpResponse(status=204, content_type='application/json')
+
+
+@login_required
+@log_error(logger)
+def add_service_hook(request, owner, project):
+    project_ = Project.objects.filter(owner=owner, name=project).all()[0]
+    if project_.install_hook(request.user):
+        return HttpResponse(status=204, content_type='application/json')
+    else:
+        return HttpResponse(status=404, content_type='application/json')
 
 
 @log_error(logger)
