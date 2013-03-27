@@ -11,7 +11,7 @@ from django.contrib.messages.api import get_messages
 
 from social_auth import __version__ as version
 
-from github_jenkins.app.models import Project, JenkinsBuild
+from github_jenkins.app.models import Project, JenkinsBuild, PullRequest
 from github_jenkins.app.debugging import log_error
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ def pull_requests(request, owner, project):
 
 def _get_row_dict(project, pr, build):
     return {
-        'open': pr.state == 'open',
+        'open': pr.open,
         'pr_id': _make_pr_id(pr),
         'pr_issue_url': pr.issue_url,
         'pr_number': pr.number,
@@ -85,8 +85,8 @@ def _get_row_dict(project, pr, build):
 @log_error(logger)
 def pull_request_row(request, owner, project, pr_number):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
-    pr = project_.get_pull_request(request.user, int(pr_number))
-    if pr.state != 'open':
+    pr = PullRequest.objects.get(project=project_, number=int(pr_number))
+    if not pr.open:
         data = {'open': False, 'pr_id': _make_pr_id(pr)}
         return HttpResponse(json.dumps(data), content_type='application/json')
     build = JenkinsBuild.search_pull_request(project_, pr.number)
@@ -101,7 +101,8 @@ def new_pull_request_rows(request, owner, project, old_max_pr_number):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
 
     prs = []
-    for pr in project_.get_pull_requests(request.user):
+    for pr in PullRequest.objects.filter(project=project_).\
+            order_by('-number').all():
         if pr.number <= old_max_pr_number:
             break
         prs.append(pr)
@@ -131,6 +132,7 @@ def new_pull_request_rows(request, owner, project, old_max_pr_number):
 @log_error(logger)
 def rebuild_pr(request, owner, project, pr):
     project_ = Project.objects.filter(owner=owner, name=project).all()[0]
+    # Intentionally asking GitHub for the PR
     pull_request = project_.get_pull_request(request.user, int(pr))
     build = JenkinsBuild.new_from_project_pr(project_, pull_request)
     build.trigger_jenkins()

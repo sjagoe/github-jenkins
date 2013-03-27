@@ -1,5 +1,5 @@
 $(document).ready(function() {
-    var base_delay = 90000;
+    var base_delay = 30000;
     var delay;
     var make_short_delay = function () {
         return base_delay + (Math.random() * base_delay);
