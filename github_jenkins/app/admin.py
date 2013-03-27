@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from github_jenkins.app.models import JenkinsBuild, JenkinsJob, Project
+from github_jenkins.app.models import JenkinsBuild, JenkinsJob, Project, \
+    PullRequest
+
+
+class PullRequestAdmin(admin.ModelAdmin):
+    list_display = ('number', 'project')
+admin.site.register(PullRequest, PullRequestAdmin)
 
 
 class JenkinsJobAdmin(admin.ModelAdmin):

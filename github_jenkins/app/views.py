@@ -147,6 +147,16 @@ def add_service_hook(request, owner, project):
         return HttpResponse(status=404, content_type='application/json')
 
 
+@login_required
+@log_error(logger)
+def reload_all_pull_requests(request):
+    if not request.user.is_staff:
+        return HttpResponse(status=404, content_type='application/json')
+    for project in Project.objects.all():
+        project.reload_pull_requests(request.user)
+    return HttpResponse(status=204, content_type='application/json')
+
+
 @log_error(logger)
 def error(request):
     """Error view"""

@@ -2,7 +2,7 @@ from django.conf.urls.defaults import patterns, url, include
 
 from github_jenkins.app.views import home, logout, error, projects, \
     pull_requests, rebuild_pr, pull_request_row, new_pull_request_rows, \
-    add_service_hook
+    add_service_hook, reload_all_pull_requests
 from github_jenkins.app.notifications import jenkins, github
 
 
@@ -20,6 +20,8 @@ urlpatterns = patterns(
         name='rebuild'),
     url(r'^add_hook/(?P<owner>[^/]+?)/(?P<project>[^/]+?)/$', add_service_hook,
         name='add_service_hook'),
+    url(r'^reload_pull_requests/$', reload_all_pull_requests,
+        name='reload_pull_requests'),
     url(r'^error/$', error, name='error'),
     url(r'^logout/$', logout, name='logout'),
     url(r'^notification/jenkins/$', jenkins, name='notify_jenkins'),

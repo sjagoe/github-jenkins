@@ -67,7 +67,8 @@ def github(request):
     logger.info('Received event from GitHub: PR #{0}, {1}: {2}'.format(
         pr_number, project_name, action))
 
-    pr = PullRequest.update_pull_request(pr_number, project_name)
+    html_url = pull_request['html_url']
+    pr = PullRequest.update_pull_request(pr_number, project_name, html_url)
     if pr is None:
         return HttpResponse(status=404)
 

@@ -77,6 +77,19 @@ class Project(models.Model):
     def get_pull_request(self, user, pr_id):
         return self.get_repo(user).get_pull(pr_id)
 
+    def reload_pull_requests(self, user):
+        found_numbers = set()
+        if not user.is_staff:
+            return False
+        for source_pr in self.get_pull_requests(user):
+            pr = PullRequest._update_pull_request(source_pr, self)
+            found_numbers.add(pr.number)
+        for old_pr in PullRequest.objects.filter(project=self).\
+                exclude(number__in=found_numbers).all():
+            old_pr.open = False
+            old_pr.save()
+        return True
+
     @classmethod
     def get(cls, owner_or_full_name, name=None):
         if '/' in owner_or_full_name and name is not None:
@@ -103,8 +116,7 @@ class Project(models.Model):
 
 class PullRequest(models.Model):
 
-    number = models.IntegerField(primary_key=True)
-
+    number = models.IntegerField(db_index=True)
     project = models.ForeignKey(Project)
 
     title = models.CharField(max_length=8192)
@@ -117,8 +129,11 @@ class PullRequest(models.Model):
     mergeable = models.BooleanField()
     merged = models.BooleanField()
 
+    class Meta:
+        unique_together = ('project', 'number')
+
     @classmethod
-    def update_pull_request(cls, pr_number, project_name):
+    def update_pull_request(cls, pr_number, project_name, html_url):
         project = Project.get(project_name)
         if project is None:
             logger.warn('Project {0!r} not found'.format(project_name))
@@ -135,15 +150,22 @@ class PullRequest(models.Model):
             logger.warn(message, exc_info=exc_info)
             return None
 
-        if source_pr.html_url != pr_url:
+        if source_pr.html_url != html_url:
             logger.warn(('HTML URL for the pull request does not match what GutHub tells '
                          'us: {0!r} != {1!r}').format(html_url, source_pr.html_url))
             return None
 
+        logger.info('Passed checks, updating PR {0} {1}'.format(
+            project_name, pr_number))
+
+        return cls._update_pull_request(source_pr, project)
+
+    @classmethod
+    def _update_pull_request(cls, source_pr, project):
         try:
-            pr = cls.objects.get(number=pr_number)
+            pr = cls.objects.get(project=project, number=source_pr.number)
         except ObjectDoesNotExist:
-            pr = PullRequest(number=source_pr.number)
+            pr = cls(project=project, number=source_pr.number)
 
         pr.title = source_pr.title
         pr.html_url = source_pr.html_url
