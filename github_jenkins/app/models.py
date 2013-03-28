@@ -219,6 +219,7 @@ class JenkinsBuild(models.Model):
     def new_from_project_pr(cls, project, pr):
         if isinstance(pr, PullRequest):
             head_sha = pr.head_sha
+            pull_request = pr
         else:
             head_sha = pr.head.sha
             pull_request = PullRequest._update_pull_request(pr, project)
