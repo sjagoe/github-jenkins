@@ -212,7 +212,7 @@ class JenkinsBuild(models.Model):
             urllib.urlencode({'GIT_BASE_REPO': project.full_name,
                               'GIT_HEAD_REPO': self.pull_request.head_repo,
                               'GIT_SHA1': self.pull_request.head_sha,
-                              'GITHUB_URL': self.pull_request_url,
+                              'GITHUB_URL': self.pull_request.html_url,
                               'PR_NUMBER': self.pull_request.number}))
 
     @classmethod
