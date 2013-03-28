@@ -198,6 +198,7 @@ class JenkinsBuild(models.Model):
     build_status = models.CharField(max_length=16, default=WAITING)
 
     pull_request = models.ForeignKey(PullRequest)
+    build_sha = models.CharField(max_length=40)
 
     def __repr__(self):
         return u'<JenkinsBuild project={project}, build_number={num}, pr={pr}>'.\
@@ -211,7 +212,7 @@ class JenkinsBuild(models.Model):
             project.jenkins_job.url,
             urllib.urlencode({'GIT_BASE_REPO': project.full_name,
                               'GIT_HEAD_REPO': self.pull_request.head_repo,
-                              'GIT_SHA1': self.pull_request.head_sha,
+                              'GIT_SHA1': self.build_sha,
                               'GITHUB_URL': self.pull_request.html_url,
                               'PR_NUMBER': self.pull_request.number}))
 
@@ -224,7 +225,8 @@ class JenkinsBuild(models.Model):
             head_sha = pr.head.sha
             pull_request = PullRequest._update_pull_request(pr, project)
         logger.info('Creating build for {0} at {1}'.format(pr.number, head_sha))
-        build = JenkinsBuild(project=project, pull_request=pull_request)
+        build = JenkinsBuild(project=project, pull_request=pull_request,
+                             build_sha=head_sha)
         build.save()
         return build
 
@@ -302,10 +304,10 @@ class JenkinsBuild(models.Model):
                 self.build_status))
         text = text.format(build=self.build_number)
         logger.info('Notifying GitHub of status for PR #{0}, {1!r}: {2!r}. {3!r}'.format(
-            self.pull_request.number, self.pull_request.head_sha, status, text))
+            self.pull_request.number, self.build_sha, status, text))
         gh = get_gh(self.project.user)
         repo = gh.get_repo(self.pull_request.head_repo) # ??
-        commit = repo.get_commit(self.pull_request.head_sha)
+        commit = repo.get_commit(self.build_sha)
         if self.build_url is not None:
             commit.create_status(status, target_url=self.build_url,
                                  description=text)
