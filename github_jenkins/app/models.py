@@ -177,7 +177,7 @@ class PullRequest(models.Model):
         pr.head_sha = source_pr.head.sha
         pr.open = source_pr.state == 'open'
         pr.mergeable = source_pr.mergeable \
-                       if not source_pr.merged else True # FIXME
+            if source_pr.mergeable is not None else False # FIXME
         pr.merged = source_pr.merged
         pr.save()
         return pr
