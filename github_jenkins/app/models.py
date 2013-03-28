@@ -217,9 +217,12 @@ class JenkinsBuild(models.Model):
 
     @classmethod
     def new_from_project_pr(cls, project, pr):
-        logger.info('Creating build for {0} at {1}'.format(pr.number, pr.head.sha))
-        if not isinstance(pr, PullRequest):
+        if isinstance(pr, PullRequest):
+            head_sha = pr.head_sha
+        else:
+            head_sha = pr.head.sha
             pull_request = PullRequest._update_pull_request(pr, project)
+        logger.info('Creating build for {0} at {1}'.format(pr.number, head_sha))
         build = JenkinsBuild(project=project, pull_request=pull_request)
         build.save()
         return build
