@@ -75,7 +75,7 @@ def github(request):
     if action not in ('opened', 'synchronize'):
         return HttpResponse(status=204)
 
-    build = JenkinsBuild.new_from_project_pr(project, pr)
+    build = JenkinsBuild.new_from_project_pr(pr.project, pr)
     build.trigger_jenkins()
     build.notify_github()
 
