@@ -301,7 +301,7 @@ class JenkinsBuild(models.Model):
             self.pull_request.number, self.pull_request.head_sha, status, text))
         gh = get_gh(self.project.user)
         repo = gh.get_repo(self.pull_request.head_repo) # ??
-        commit = repo.get_commit(self.commit)
+        commit = repo.get_commit(self.pull_request.head_sha)
         if self.build_url is not None:
             commit.create_status(status, target_url=self.build_url,
                                  description=text)
